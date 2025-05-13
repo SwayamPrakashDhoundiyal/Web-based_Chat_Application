@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cappuccino</title>
+    <link href='https://unpkg.com/css.gg@2.0.0/icons/css/carousel.css' rel='stylesheet'>
+    <link href='https://unpkg.com/css.gg@2.0.0/icons/css/profile.css' rel='stylesheet'>
+    <link href='https://unpkg.com/css.gg@2.0.0/icons/css/close-r.css' rel='stylesheet'>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" type="text/css" href="..\static\Capp.css">
+</head>
+<body>
+    <div class="blur" id="blur_dialog">
+        <div class="dialog">
+            <div class="top_bar">
+                <div>
+                    <button class="request" onclick="form_par('request')">Find people</button>
+                    <button class="pending" onclick="form_par('pending')">Pending request</button>
+                </div>
+                <button class="sendButton closeButton" onclick="close_blur()"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg></i></button>
+            </div>
+            <form id="request_form" class="form_r" autocomplete="off">
+                <div><input type="text" name="userfind" id="userSearch" placeholder="Username..." class="search"> <button type="submit" class="sendButton" value="request_userlist"><i class="fa fa-paper-plane"></i></button></div>
+                <div class="searchResult" id="friend_request_result"></div>
+            </form>
+            <form id="accept_form" class="form_r" autocomplete="off">
+                <div class="searchResult" id="request_accept_results"></div>
+            </form>
+        </div>
+    </div>
+    <div class="navbar">
+        <header>Cappuccino</header>
+     </div>
+    <div class="content_holder">
+        <div class="panel">
+            <ul>
+                <li><a><i class="fa-solid fa-house" id="home"></i></a></li>
+                <li><a><i class="fas fa-inbox" id="inbox" onclick="open_blur()"></i></a></li>
+                <li><a><i class="gg-carousel"></i></i></a></li>
+                <li><a><i class="gg-profile"></i></i></a></li>
+            </ul>
+        </div>
+        <div class="chats">
+             <div class="bar"><input type="text" placeholder="Search" name=" " id="searchInput" class="search"></div>
+             <div><div id = "rooms"></div>
+        </div>
+        </div>
+        <div id="messagesBox" class="messagesBox"></div>
+     </div>
+    <!-- MESSAGE BOX KA CODE -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js" integrity="sha384-2huaZvOR9iDzHqslqwpR87isEmrfxqyWOF7hr7BY6KG0+hVKLoEXMPUJw3ynWuhO" crossorigin="anonymous"></script>
+        <script>
+            const socket = io.connect("https://z1stznbl-3000.inc1.devtunnels.ms/");
+            let conn_name = "null"
+            const user = "{{username}}"
+            /*normal frontend function start here*/
+            function contact_clicked(data){
+                if(conn_name != data)
+                {
+                    conn_name = data
+                    socket.emit('contact_connection_start',{
+                    connection_name:data
+                    });
+                }
+            }
+            function close_blur(){
+                var blur = document.getElementById('blur_dialog');
+                blur.style.display = "none";
+
+            }
+            function open_blur(){
+                var blur = document.getElementById('blur_dialog');
+                blur.style.display = "flex";
+            }
+
+            function form_par(part){
+                if(part == "request")
+                {
+                    var form = document.getElementById('request_form');
+                    var hide = document.getElementById('accept_form');
+                    form.style.display = "block";
+                    hide.style.display = "none";
+                }else{
+                    var hide = document.getElementById('request_form');
+                    var form = document.getElementById('accept_form');
+                    form.style.display = "block";
+                    hide.style.display = "none";
+                    socket.emit('retrive_request_data');
+                }
+            }
+
+            document.getElementById('accept_form').onsubmit = function(e){
+                e.preventDefault();
+                var submitValue = e.submitter.value; //submitter is the part of mordern browser that directly captures the sumbit type button
+                const myresponse = submitValue.split("#");
+                switch(myresponse[1]){
+                    case'yes':
+                        console.log(myresponse[0]);
+                        socket.emit('send_acceptance',{
+                            connection_code:myresponse[0],
+                            from_user:user,
+                            to_user:myresponse[3],
+                            accept:true
+                        });
+                        const div_1 = document.getElementById(myresponse[2]);
+                        div_1.remove();
+                        break;
+                    case'no':
+                        socket.emit('send_acceptance',{
+                            connection_code:myresponse[0],
+                            from_user:user,
+                            to_user:myresponse[3],
+                            accept:false
+                        });
+                        const div = document.getElementById(myresponse[2]);
+                        div.remove();
+                        break;
+                }
+
+            }
+            document.getElementById('request_form').onsubmit = function(e){
+                e.preventDefault();
+                var submitValue = e.submitter.value;
+                    if(submitValue == 'request_userlist')
+                    {
+                        var searchInput = userSearch.value.trim();
+                        if(searchInput.length)
+                        {
+                            socket.emit('request_userlist',{
+                                entry:searchInput
+                            });
+                        }
+                        userSearch.value = ''; //clear and then change the focus back to input box
+                        userSearch.focus();
+
+                    }else
+                    {
+                        socket.emit('requeset_To',{
+                            connection_code:submitValue
+                        })
+                    }
+
+            }
+            /*normal frontend function end here*/
+
+
+            socket.on('connect',function(data){
+                console.log("connected");
+                socket.emit('join_personal_room',{
+                    username:"{{username}}"
+                })
+            });
+            socket.on('show_results',function(data){
+                console.log(data);
+            })
+            socket.on('contact_connect', function (data) {
+                //initiatees and sends the joined message
+                var messagesBox = document.getElementById("messagesBox");
+                messagesBox.innerHTML = `<div id="messagesBox" class="messagesBox">
+                    <div class="messagesHeader">${data.connection_name}</div>
+                    <div id="messages" class="messageContainer"></div>
+                     <form method="post" id = "message_input_form" class="form-messages">
+                        <input type="text" id="message_input" class="messageInput" placeholder="Message ...." autocomplete="off">
+                        <button type="submit" class="sendButton"><i class="fa fa-paper-plane"></i></button>
+                    </form>
+                </div>` // Empty container for messages
+                messagesBox.style.display = "flex";
+                socket.emit('start_msg_history',{
+                    connection_code:data.connection_code
+                });
+
+            document.getElementById('message_input_form').onsubmit = function(e){
+                e.preventDefault();
+                let message = message_input.value.trim();
+                var d = new Date();
+                if(message.length){
+                    console.log(message +" "+data.connection_code)
+                    socket.emit('send_message',{ //when enter is pressed the message is send to the person
+                        sender: data.username,
+                        receiver:data.connection_name,
+                        connection_code: data.connection_code,
+                        message: message,
+                        time:{hr:d.getHours(),min:d.getMinutes()}
+                    })
+                }
+                message_input.value = ''; //clear and then change the focus back to input box
+                message_input.focus();
+            }
+            });
+
+            /*
+                Catches the contact list and updates it on the contact list panel, as well as retrieves all the room codes with it but doesn't 
+                displays it.
+            */
+            socket.on('connected',function(data){
+                console.log("connected and is ready for joining");
+            });
+            socket.on('update_contact',function(data){
+                console.log(data);
+                if (typeof data !== 'undefined')
+                    {let roomlist = document.getElementById("rooms");//contact list item
+                    roomlist.innerHTML = `<ul id="contact_list"></ul>`
+                    var contact_list = document.getElementById("contact_list");
+                    let keys = Object.keys(data)
+                    keys.forEach((key)=> {
+                        const newNode = document.createElement('li');
+                        connection_name = data[key]
+                        newNode.innerHTML = `<button class="bu-list" onclick = "contact_clicked('${connection_name}')"><img src="../static/pfp.png" alt="Profile Picture"><span>${data[key]}</span></button>`;
+                        contact_list.appendChild(newNode);
+                    })}
+                else
+                {
+                    let roomlist = document.getElementById("rooms");
+                    const newnode = document.createElement('div');
+                    newnode.classList.add("ghost");
+                    newnode.innerHTML=`<svg width="200px" height="200px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M16 10.5C16 11.3284 15.5523 12 15 12C14.4477 12 14 11.3284 14 10.5C14 9.67157 14.4477 9 15 9C15.5523 9 16 9.67157 16 10.5Z" fill="#171922c4"/>
+                        <ellipse cx="9" cy="10.5" rx="1" ry="1.5" fill="#171922c4"/>
+                        <path d="M22 12.3006C22 6.61173 17.5228 2 12 2C6.47715 2 2 6.61173 2 12.3006V19.723C2 21.0453 3.35098 21.9054 4.4992 21.314C5.42726 20.836 6.5328 20.9069 7.39614 21.4998C8.36736 22.1667 9.63264 22.1667 10.6039 21.4998L10.9565 21.2576C11.5884 20.8237 12.4116 20.8237 13.0435 21.2576L13.3961 21.4998C14.3674 22.1667 15.6326 22.1667 16.6039 21.4998C17.4672 20.9069 18.5727 20.836 19.5008 21.314C20.649 21.9054 22 21.0453 22 19.723V16.0118" stroke="#171922c4" stroke-width="0.5" stroke-linecap="round"/>
+                        </svg>
+                        <h2>No contacts yet</h2>`;
+                    roomlist.appendChild(newnode);
+                }
+            });
+
+
+
+            /*
+                basic room announcement to be changed to status effect
+            */
+            socket.on('join_room_announcement',function(data){ //join room event triggered then the function runs
+                    const newNode = document.createElement('div');
+                    newNode.innerHTML = `<b>${data.username}</b> has joined the room`;
+                    var messageContainer = document.getElementById("messages");
+                    messageContainer.appendChild(newNode);
+                });
+
+
+            /*
+                Message is recieved then the event is called and it is displayed on the reciever as well as the senders page.
+            */
+            socket.on('receive_message',function(data){ //when message is recieved the function runs
+                let message = data.message
+                if (message.length) {
+                    let newMsg = `${data.username}: ${message}` 
+                    var messageDialog = document.createElement("div");
+                    var d = new Date();
+                    if(data.sender == user){
+                        messageDialog.classList.add("message-block-send");
+                        messageDialog.innerHTML = `<div class="sender">
+                            <div class="message">${message}</div>
+                            <div class="time">You ${d.getHours()}:${d.getMinutes()}</div>
+                        </div>`;
+                    }else
+                    {
+                        messageDialog.classList.add("message-block-recieve");
+                        messageDialog.innerHTML = `<div class="sender">
+                            <div class="message">${message}</div>
+                            <div class="time">${data.sender} ${d.getHours()}:${d.getMinutes()}</div>`;
+                    }
+            
+                    var messageContainer = document.getElementById("messages");
+                    messageContainer.appendChild(messageDialog);
+                  }
+
+            });
+            socket.on('messagehistory',function(data)
+            {
+                console.log("called message history")
+                let keys = Object.keys(data)
+                    keys.forEach((key)=> 
+                    {
+                        msg_info = data[key]
+                        let message = msg_info.message
+                        if (message.length) {
+                            var messageDialog = document.createElement("div");
+                            var d = new Date();
+                            if(msg_info.sender == user){
+                                messageDialog.classList.add("message-block-send");
+                                messageDialog.innerHTML = `<div class="sender">
+                                    <div class="message">${message}</div>
+                                    <div class="time">You ${msg_info.time.hr}:${msg_info.time.min}</div>
+                                </div>`;
+                            }else
+                            {
+                                messageDialog.classList.add("message-block-recieve");
+                                messageDialog.innerHTML = `<div class="sender">
+                                    <div class="message">${message}</div>
+                                    <div class="time">${msg_info.sender} ${msg_info.time.hr}:${msg_info.time.min}</div>`;
+                            }
+                        
+                            var messageContainer = document.getElementById("messages");
+                            messageContainer.appendChild(messageDialog);
+                          }
+                    })
+                    socket.emit('join_contact');
+            });
+            
+                socket.on('show_results',function(data)
+                {
+                    let keys = Object.keys(data)
+                    keys.forEach((key)=>
+                    {
+                        respone = data[key]
+                        const container = document.getElementById('friend_request_result');
+                        var result_div = document.createElement("div");
+                        result_div.classList.add("result");
+                        if(respone['action'] == true)
+                        {
+                            result_div.innerHTML = `
+                            <h2>${respone['id']} <span class="mute">#${respone['id_code']}</span></h2>
+                            <button class="sendButton" value="${respone['id_code']}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-check"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </button>`;
+                        }else
+                        {
+                            result_div.innerHTML = `
+                            <h2>${respone['id']} <span class="mute">#${respone['id_code']}</span></h2>
+                            <button class="sendButton disable" value="${respone['id_code']}>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-check"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </button>`;
+                        }
+                        container.appendChild(result_div);
+                    })
+                });
+
+                socket.on('display_request_data',function(data)
+                {
+                    let keys = Object.keys(data)
+                    keys.forEach((key)=>
+                    {
+                        respone = data[key]
+                        const container = document.getElementById('request_accept_results');
+                        var result_div = document.createElement("div");
+                        result_div.classList.add("result");
+                        result_div.id = String(key);
+                        var id=  String(key);
+                        result_div.innerHTML = `
+                        <h2>${respone['sender']} <span class="mute">#${respone['code']}</span></h2>
+                        <div>
+                            <button name="accept" class="sendButton acceptButton" value="${respone['code']}#yes#${id}#${respone['sender']}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-check"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </button>
+                            <button name="decline" class="sendButton declineButton" value="${respone['code']}#no#${id}#${respone['sender']}">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-x"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            </button>
+                        </div>`;
+                        container.appendChild(result_div);
+                    })
+                });
+
+        </script>
+    
+<!-- Splash Screen ka code -------------------------------------------------------------------->
+</body>
+</html>
